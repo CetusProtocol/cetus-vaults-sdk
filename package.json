@@ -1,6 +1,6 @@
 {
   "name": "vaults-sdk",
-  "version": "0.0.0-experimental-20240925162949",
+  "version": "0.0.6",
   "description": "SDK for cetus vaults",
   "typings": "dist/index.d.ts",
   "main": "dist/index.js",

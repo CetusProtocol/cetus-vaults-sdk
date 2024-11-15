@@ -71,7 +71,7 @@ export const clmm_mainnet: SdkOptions = {
   },
   vaults: {
     package_id: '0xd3453d9be7e35efe222f78a810bb3af1859fd1600926afced8b4936d825c9a05',
-    published_at: '0xabbd278f738affe762e9df4765b3409bb1e86a355a4f611ad82b278c18108918',
+    published_at: '0x1ed1fef522ccea98a4fbd954543d5019238ec89282fbdea9a753e0a17e96fc28',
     version: 1,
     config: SDKConfig.vaultConfig,
   },
