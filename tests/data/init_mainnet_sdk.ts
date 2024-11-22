@@ -56,35 +56,35 @@ const SDKConfig = {
 export const clmm_mainnet: SdkOptions = {
   fullRpcUrl: getFullnodeUrl('mainnet'),
   simulationAccount: {
-    address: '0x326ce9894f08dcaa337fa232641cc34db957aec9ff6614c1186bc9a7508df0bb',
+    address: '0x0000000000000000000000000000000000000000000000000000000000000000',
   },
   clmm_pool: {
     package_id: '0x1eabed72c53feb3805120a081dc15963c204dc8d091542592abaf7a35689b2fb',
-    published_at: '0x70968826ad1b4ba895753f634b0aea68d0672908ca1075a2abdf0fc9e0b2fc6a',
+    published_at: '0xdc67d6de3f00051c505da10d8f6fbab3b3ec21ec65f0dc22a2f36c13fc102110',
     version: 4,
     config: SDKConfig.clmmConfig,
   },
   integrate: {
     package_id: '0x996c4d9480708fb8b92aa7acf819fb0497b5ec8e65ba06601cae2fb6db3312c3',
-    published_at: '0x8faab90228e4c4df91c41626bbaefa19fc25c514405ac64de54578dec9e6f5ee',
+    published_at: '0x3a5aa90ffa33d09100d7b6941ea1c0ffe6ab66e77062ddd26320c1b073aabb10',
     version: 2,
   },
   vaults: {
     package_id: '0xd3453d9be7e35efe222f78a810bb3af1859fd1600926afced8b4936d825c9a05',
-    published_at: '0x1ed1fef522ccea98a4fbd954543d5019238ec89282fbdea9a753e0a17e96fc28',
+    published_at: '0x58e5de6e425397eeaf952d55c0f94637bee91b25d6138ce222f89cda0aefec03',
     version: 1,
     config: SDKConfig.vaultConfig,
   },
   frams: {
     package_id: '0x11ea791d82b5742cc8cab0bf7946035c97d9001d7c3803a93f119753da66f526',
-    published_at: '0x11ea791d82b5742cc8cab0bf7946035c97d9001d7c3803a93f119753da66f526',
+    published_at: '0x7e4ca066f06a1132ab0499c8c0b87f847a0d90684afa902e52501a44dbd81992',
     version: 1,
     config: SDKConfig.framsConfig,
   },
   aggregator: {
-    endPoint: 'https://api-sui-cloudfront.cetus.zone/router_v2/find_routes',
+    endPoint: 'https://api-sui.cetus.zone/router_v2/find_routes',
     fullNodeurl: 'https://fullnode.mainnet.sui.io:443',
-    walletAddress: '0xfba94aa36e93ccc7d84a6a57040fc51983223f1b522a8d0be3c3bf2c98977ebb',
+    walletAddress: '0x0000000000000000000000000000000000000000000000000000000000000000',
     env: Env.Mainnet,
     providers: ['CETUS', 'DEEPBOOK', 'KRIYA', 'KRIYAV3', 'FLOWX', 'FLOWXV3', 'AFTERMATH', 'TURBOS', 'HAEDAL', 'VOLO', 'AFSUI'],
   },

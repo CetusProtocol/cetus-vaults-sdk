@@ -26,37 +26,37 @@ const SDKConfig = {
 export const clmm_testnet: SdkOptions = {
   fullRpcUrl: getFullnodeUrl('testnet'),
   simulationAccount: {
-    address: '0xcd0247d0b67e53dde69b285e7a748e3dc390e8a5244eb9dd9c5c53d95e4cf0aa',
+    address: '0x0000000000000000000000000000000000000000000000000000000000000000',
   },
   clmm_pool: {
     package_id: '0x0c7ae833c220aa73a3643a0d508afa4ac5d50d97312ea4584e35f9eb21b9df12',
-    published_at: '0x0c7ae833c220aa73a3643a0d508afa4ac5d50d97312ea4584e35f9eb21b9df12',
+    published_at: '0x85e61285a10efc6602ab00df70a0c06357c384ef4c5633ecf73016df1500c704',
     version: 6,
     config: SDKConfig.clmmConfig,
   },
   integrate: {
     package_id: '0x2918cf39850de6d5d94d8196dc878c8c722cd79db659318e00bff57fbb4e2ede',
-    published_at: '0x2918cf39850de6d5d94d8196dc878c8c722cd79db659318e00bff57fbb4e2ede',
+    published_at: '0x19dd42e05fa6c9988a60d30686ee3feb776672b5547e328d6dab16563da65293',
     version: 6,
   },
   vaults: {
     package_id: '0x325b7d67276ff809df6b3fa17a2a6fbff6aaa20e467c3cf74d1a1d09b8890bbd',
-    published_at: '0x325b7d67276ff809df6b3fa17a2a6fbff6aaa20e467c3cf74d1a1d09b8890bbd',
+    published_at: '0x6acd0c502ab22898e99bfae48444eecaffa5197003cc197a96a7627c33c318ec',
     version: 1,
     config: SDKConfig.vaultConfig,
   },
   frams: {
     package_id: '0xcc38686ca84d1dca949b6966dcdb66b698b58a4bba247d8db4d6a3a1dbeca26e',
-    published_at: '0xcc38686ca84d1dca949b6966dcdb66b698b58a4bba247d8db4d6a3a1dbeca26e',
+    published_at: '0x3c4582ee27a09f7e6c091022d0d279fdc8e54c1f782916bf135a71a8e8006aa5',
     version: 1,
     config: SDKConfig.framsConfig,
   },
   aggregator: {
-    endPoint: 'https://api-sui-cloudfront.cetus.zone/router_v2/find_routes',
+    endPoint: 'https://api-sui.devcetus.com/router_v2/find_routes',
     fullNodeurl: 'https://fullnode.mainnet.sui.io:443',
-    walletAddress: '0xfba94aa36e93ccc7d84a6a57040fc51983223f1b522a8d0be3c3bf2c98977ebb',
-    env: Env.Mainnet,
-    providers: ['CETUS', 'DEEPBOOK', 'KRIYA', 'KRIYAV3', 'FLOWX', 'FLOWXV3', 'AFTERMATH', 'TURBOS', 'HAEDAL', 'VOLO', 'AFSUI'],
+    walletAddress: '0x0000000000000000000000000000000000000000000000000000000000000000',
+    env: Env.Testnet,
+    providers: ['CETUS', 'DEEPBOOK'],
   },
 }
 
