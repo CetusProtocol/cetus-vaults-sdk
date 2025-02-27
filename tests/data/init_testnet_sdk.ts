@@ -39,15 +39,14 @@ const SDKConfig = {
     global_config_id: '0x499132a4baf342a0fe9528a3666a77b2aece3be129f4a3ada469fef4b9c34fb4',
     rewarder_manager_id: '0x960c7800e301fd1e47b79037927b426db57b643bd2934f7069d81c2dae092230',
     rewarder_manager_handle: '0x1274149371876b60742cd02071a09f2aa72ffee75b76fdfc45724d98f18ea5b5',
-    admin_cap_id: '0x110175e641c1ea8f9287f4fd59cb6a1fb97a3f3ec595aa30d0e6ed93ac4caa0c'
+    admin_cap_id: '0x110175e641c1ea8f9287f4fd59cb6a1fb97a3f3ec595aa30d0e6ed93ac4caa0c',
   },
-  
 }
 
 export const clmm_testnet: SdkOptions = {
   fullRpcUrl: getFullnodeUrl('testnet'),
   simulationAccount: {
-    address: '0xcd0247d0b67e53dde69b285e7a748e3dc390e8a5244eb9dd9c5c53d95e4cf0aa',
+    address: '0x0000000000000000000000000000000000000000000000000000000000000000',
   },
   clmm_pool: {
     package_id: '0x0c7ae833c220aa73a3643a0d508afa4ac5d50d97312ea4584e35f9eb21b9df12',

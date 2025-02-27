@@ -56,7 +56,7 @@ const SDKConfig = {
 export const clmmMainnet: SdkOptions = {
   fullRpcUrl: getFullnodeUrl('mainnet'),
   simulationAccount: {
-    address: '0x326ce9894f08dcaa337fa232641cc34db957aec9ff6614c1186bc9a7508df0bb',
+    address: '0x0000000000000000000000000000000000000000000000000000000000000000',
   },
   clmm_pool: {
     package_id: '0x1eabed72c53feb3805120a081dc15963c204dc8d091542592abaf7a35689b2fb',

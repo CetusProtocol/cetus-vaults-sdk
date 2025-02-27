@@ -46,7 +46,7 @@ const SDKConfig = {
 export const clmmTestnet: SdkOptions = {
   fullRpcUrl: getFullnodeUrl('testnet'),
   simulationAccount: {
-    address: '0xcd0247d0b67e53dde69b285e7a748e3dc390e8a5244eb9dd9c5c53d95e4cf0aa',
+    address: '0x0000000000000000000000000000000000000000000000000000000000000000',
   },
   clmm_pool: {
     package_id: '0x0c7ae833c220aa73a3643a0d508afa4ac5d50d97312ea4584e35f9eb21b9df12',
