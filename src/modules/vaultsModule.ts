@@ -12,6 +12,7 @@ import {
   d,
   extractStructTagFromType,
   getFutureTime,
+  getObjectFields,
 } from '@cetusprotocol/cetus-sui-clmm-sdk'
 import { SuiClient } from '@mysten/sui/client'
 import { Transaction, TransactionArgument, TransactionObjectArgument } from '@mysten/sui/transactions'
@@ -27,6 +28,7 @@ import {
   InputType,
   SuiStakeProtocol,
   Vault,
+  VaultsConfigs,
   VaultsRouterModule,
   VaultsVaultModule,
   WithdrawBothParams,
@@ -369,7 +371,6 @@ export class VaultsModule implements IModule {
 
         afterSqrtPrice = swapData.after_sqrt_price
 
-
         paresSwapData = this.paresSwapData(swapData, params.input_amount, params.fix_amount_a, a2b, lowerTick, upperTick, ratioA, ratioB)
 
         fixAmountA = paresSwapData.fixAmountA
@@ -655,6 +656,7 @@ export class VaultsModule implements IModule {
         route_obj: res,
         byAmountIn: true,
         liquidity: liquidityChanges?.deltaLiquidity,
+        originRes: res,
       }
     } catch (error) {
       try {
@@ -666,7 +668,6 @@ export class VaultsModule implements IModule {
             byAmountIn,
             pools,
           })
-
 
           if (res) {
             let after_sqrt_price = curSqrtPrice
@@ -685,6 +686,7 @@ export class VaultsModule implements IModule {
               route_obj: res.routeData,
               byAmountIn: true,
               liquidity: liquidityChanges?.deltaLiquidity,
+              originRes: res,
             }
           }
           return null
@@ -868,7 +870,6 @@ export class VaultsModule implements IModule {
     const { vault, pool } = await this.getVaultAndPool(vault_id, true)
 
     const result = await this.calculateDepositAmount(params, true, true)
-    
 
     const tx = new Transaction()
     let primaryCoinAInputs
@@ -930,7 +931,7 @@ export class VaultsModule implements IModule {
     const fromCoinType = a2b ? params.coinTypeA : params.coinTypeB
     const swapCoinInputFrom = TransactionUtil.buildCoinForAmount(tx, allCoinAsset, BigInt(swap_in_amount), fromCoinType, false, true)
     const selectedUnusedAmount = BigInt(swapCoinInputFrom.tragetCoinAmount) - BigInt(swap_in_amount)
-    
+
     let coinABs: TransactionArgument[] = []
 
     if (sui_stake_protocol !== SuiStakeProtocol.Cetus) {
@@ -938,13 +939,14 @@ export class VaultsModule implements IModule {
       const suiCoin = TransactionUtil.buildCoinForAmount(tx, swapCoinInputFrom.remainCoins, BigInt(0), fromCoinType, false).targetCoin
       coinABs = a2b ? [suiCoin, haSuiCoin] : [haSuiCoin, suiCoin]
     } else if (route_obj) {
-      const routerParams = {
-        routers: route_obj.routes,
-        byAmountIn: true,
-        txb: tx,
-        slippage: params.slippage,
+      const routerParamsV2 = {
+        routers: route_obj,
         inputCoin: swapCoinInputFrom.targetCoin,
+        slippage: params.slippage,
+        txb: tx,
+        partner: params.partner,
       }
+
       const { aggregator } = this._sdk.sdkOptions
       const cacheKey = `${aggregator.walletAddress}_getAggregatorClient`
       const cacheClient = this.getCache(cacheKey, false)
@@ -957,7 +959,7 @@ export class VaultsModule implements IModule {
         })
         client = new AggregatorClient(aggregator.endPoint, aggregator.walletAddress, suiClient, aggregator.env)
       }
-      const toCoin = await client.routerSwap(routerParams)
+      const toCoin = await client.routerSwap(routerParamsV2)
       coinABs = a2b ? [swapCoinInputFrom.originalSplitedCoin, toCoin] : [toCoin, swapCoinInputFrom.originalSplitedCoin]
     } else {
       const swapCoinInputTo = TransactionUtil.buildCoinForAmount(tx, allCoinAsset, 0n, a2b ? params.coinTypeB : params.coinTypeA, false)
@@ -1164,12 +1166,13 @@ export class VaultsModule implements IModule {
           isMintZeroCoin: false,
           tragetCoinAmount: '',
         }
-        const routerParams = {
-          routers: route_obj.routes,
-          byAmountIn: true,
-          txb: tx,
-          slippage: params.slippage,
+
+        const routerParamsV2 = {
+          routers: route_obj,
           inputCoin: swapCoinInputFrom.targetCoin,
+          slippage: params.slippage,
+          txb: tx,
+          partner: params.partner,
         }
         const { aggregator } = this._sdk.sdkOptions
         const cacheKey = `${aggregator.walletAddress}_getAggregatorClient`
@@ -1184,7 +1187,7 @@ export class VaultsModule implements IModule {
           client = new AggregatorClient(aggregator.endPoint, aggregator.walletAddress, suiClient, aggregator.env)
         }
 
-        const toCoin = await client.routerSwap(routerParams)
+        const toCoin = await client.routerSwap(routerParamsV2)
         const coinABs = a2b ? [swapCoinInputFrom.targetCoin, toCoin] : [toCoin, swapCoinInputFrom.targetCoin]
 
         if (a2b) {
@@ -1235,7 +1238,6 @@ export class VaultsModule implements IModule {
     },
     tx: Transaction
   ): Promise<{ reciveCoinA: TransactionObjectArgument; reciveCoinB: TransactionObjectArgument }> {
-
     const { vaults, frams, clmm_pool } = this._sdk.sdkOptions
     const vaultsConfigs = getPackagerConfigs(vaults)
     const framsConfigs = getPackagerConfigs(frams)
@@ -1250,7 +1252,8 @@ export class VaultsModule implements IModule {
         allCoinAsset,
         BigInt(params.ft_amount),
         params.lp_token_type,
-        false
+        false,
+        true
       ).targetCoin
     }
 
@@ -1274,7 +1277,7 @@ export class VaultsModule implements IModule {
         tx.object(CLOCK_ADDRESS),
       ],
     })
-
+    tx.transferObjects([primaryCoinInputs], tx.pure.address(this._sdk.senderAddress))
     return {
       reciveCoinA: removeCoinABs[0],
       reciveCoinB: removeCoinABs[1],
@@ -1305,10 +1308,10 @@ export class VaultsModule implements IModule {
    * @returns A Promise that resolves to a DataPage containing the list of Vaults.
    */
   async getVaultList(paginationArgs: PaginationArgs = 'all'): Promise<DataPage<Vault>> {
-    const { vaults } = this._sdk.sdkOptions
-
-    const res = await this._sdk.fullClient.queryEventsByPage({ MoveEventType: `${vaults.package_id}::vaults::CreateEvent` }, paginationArgs)
-    const warpIds = res.data.map((item) => item.parsedJson.id)
+    // const res = await this._sdk.fullClient.queryEventsByPage({ MoveEventType: `${vaults.package_id}::vaults::CreateEvent` }, paginationArgs)
+    const { vaults_pool_handle } = getPackagerConfigs(this._sdk.sdkOptions.vaults)
+    const res: any = await this._sdk.fullClient.getDynamicFields({ parentId: vaults_pool_handle })
+    const warpIds = res.data.map((item: any) => item.name.value)
 
     const objectList = await this._sdk.fullClient.batchGetObjects(warpIds, {
       showType: true,
@@ -1503,6 +1506,44 @@ export class VaultsModule implements IModule {
       coinInput,
       remainingCoins,
     }
+  }
+
+  async getVaultsConfigs(forceRefresh = false): Promise<VaultsConfigs> {
+    const { package_id } = this._sdk.sdkOptions.vaults
+    const cacheKey = `${package_id}_getMirrorPoolConfigs`
+    const cacheData = this.getCache<VaultsConfigs>(cacheKey, forceRefresh)
+    if (cacheData !== undefined) {
+      return cacheData
+    }
+
+    const objects = (
+      await this._sdk.fullClient.queryEventsByPage({
+        MoveEventType: `${package_id}::vaults::InitEvent`,
+      })
+    ).data
+
+    const config: VaultsConfigs = {
+      admin_cap_id: '',
+      vaults_manager_id: '',
+      vaults_pool_handle: '',
+    }
+
+    if (objects.length > 0) {
+      // eslint-disable-next-line no-unreachable-loop
+      for (const item of objects) {
+        const fields = item.parsedJson as any
+        config.admin_cap_id = fields.admin_cap_id
+        config.vaults_manager_id = fields.manager_id
+
+        const masterObj = await this._sdk.fullClient.getObject({ id: config.vaults_manager_id, options: { showContent: true } })
+        const masterFields = getObjectFields(masterObj)
+        config.vaults_pool_handle = masterFields.vault_to_pool_maps.fields.id.id
+        break
+      }
+      this.updateCache(cacheKey, config, cacheTime24h)
+    }
+
+    return config
   }
 
   private updateCache(key: string, data: any, time = cacheTime24h) {

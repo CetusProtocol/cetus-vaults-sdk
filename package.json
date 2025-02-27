@@ -1,6 +1,6 @@
 {
-  "name": "vaults-sdk",
-  "version": "0.0.6",
+  "name": "@cetusprotocol/vaults-sdk",
+  "version": "0.1.11",
   "description": "SDK for cetus vaults",
   "typings": "dist/index.d.ts",
   "main": "dist/index.js",
@@ -25,8 +25,11 @@
   "author": "test",
   "license": "Apache-2.0",
   "devDependencies": {
+    "@cetusprotocol/cetus-sui-clmm-sdk": "^5.3.0",
     "@commitlint/cli": "^17.1.2",
     "@commitlint/config-conventional": "^17.1.0",
+    "@mysten/bcs": "^1.0.4",
+    "@mysten/sui": "^1.6.0",
     "@types/jest": "^29.0.0",
     "@types/lossless-json": "^1.0.1",
     "@typescript-eslint/eslint-plugin": "^5.36.1",
@@ -45,11 +48,12 @@
     "tsup": "^6.6.2",
     "typescript": "^4.8.2"
   },
+  "peerDependencies": {
+    "@mysten/bcs": ">=1.0.4",
+    "@mysten/sui": ">=1.6.0"
+  },
   "dependencies": {
-    "@cetusprotocol/aggregator-sdk": "^0.2.2",
-    "@cetusprotocol/cetus-sui-clmm-sdk": "^5.1.6",
-    "@mysten/bcs": "^1.0.4",
-    "@mysten/sui": "^1.6.0",
+    "@cetusprotocol/aggregator-sdk": "^0.3.29",
     "@suchipi/femver": "^1.0.0",
     "@types/bn.js": "^5.1.1",
     "axios": "^1.4.0",

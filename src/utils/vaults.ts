@@ -132,7 +132,6 @@ export class VaultsUtils {
   }
 
   static buildPool(objects: SuiObjectResponse): Vault | undefined {
-    console.log('🚀🚀🚀 ~ file: vaults.ts:135 ~ VaultsUtils ~ buildPool ~ objects:', objects)
     const fields = getObjectFields(objects)
     const type = getObjectType(objects) as string
     const { positions } = fields

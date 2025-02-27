@@ -10,7 +10,7 @@ export enum SdkEnv {
   mainnet = 'mainnet',
   testnet = 'testnet',
 }
-export let currSdkEnv = SdkEnv.mainnet
+export let currSdkEnv = SdkEnv.testnet
 
 export function buildSdk(sdkEnv: SdkEnv = currSdkEnv): CetusVaultsSDK {
   currSdkEnv = sdkEnv

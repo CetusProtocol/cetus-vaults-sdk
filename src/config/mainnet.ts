@@ -1,13 +1,13 @@
 import { getFullnodeUrl } from '@mysten/sui/client'
 import { Env } from '@cetusprotocol/aggregator-sdk'
-import { CetusVaultsSDK, SdkOptions } from '../../src/sdk'
+import { CetusVaultsSDK, SdkOptions } from '../sdk'
 
 const SDKConfig = {
   clmmConfig: {
     pools_id: '0xf699e7f2276f5c9a75944b37a0c5b5d9ddfd2471bf6242483b03ab2887d198d0',
     admin_cap_id: '0x89c1a321291d15ddae5a086c9abc533dff697fde3d89e0ca836c41af73e36a75',
     global_config_id: '0xdaa46292632c3c4d8f31f23ea0f9b36a28ff3677e9684980e4438403a67a3d8f',
-    global_vault_id: '0xce7bceef26d3ad1f6d9b6f13a953f053e6ed3ca77907516481ce99ae8e588f2b'
+    global_vault_id: '0xce7bceef26d3ad1f6d9b6f13a953f053e6ed3ca77907516481ce99ae8e588f2b',
   },
   framsConfig: {
     global_config_id: '0x21215f2f6de04b57dd87d9be7bb4e15499aec935e36078e2488f36436d64996e',
@@ -21,7 +21,7 @@ const SDKConfig = {
     vaults_pool_handle: '0x9036bcc5aa7fd2cceec1659a6a1082871f45bc400c743f50063363457d1738bd',
     haedal: {
       package_id: '0xbde4ba4c2e274a60ce15c1cfff9e5c42e41654ac8b6d906a57efa4bd3c29f47d',
-      published_at: '0xaabf0856070391df81fad9240049d69c5a51c3d376cc0885eeedd516526cc79b',
+      published_at: '0x1d56b8ec33c3fae897eb7bb1acb79914e8152faed614868928e684c25c8b198d',
       version: 1,
       config: {
         staking_id: '0x47b224762220393057ebf4f70501b6e657c3e56684737568439a04f80849b2ca',
@@ -50,10 +50,10 @@ const SDKConfig = {
         coin_type: '0xf325ce1300e8dac124071d3152c5c5ee6174914f8bc2161e88329cf579246efc::afsui::AFSUI',
       },
     },
-  }
+  },
 }
 
-export const clmm_mainnet: SdkOptions = {
+export const clmmMainnet: SdkOptions = {
   fullRpcUrl: getFullnodeUrl('mainnet'),
   simulationAccount: {
     address: '0x326ce9894f08dcaa337fa232641cc34db957aec9ff6614c1186bc9a7508df0bb',
@@ -71,7 +71,7 @@ export const clmm_mainnet: SdkOptions = {
   },
   vaults: {
     package_id: '0xd3453d9be7e35efe222f78a810bb3af1859fd1600926afced8b4936d825c9a05',
-    published_at: '0x58e5de6e425397eeaf952d55c0f94637bee91b25d6138ce222f89cda0aefec03',
+    published_at: '0xabbd278f738affe762e9df4765b3409bb1e86a355a4f611ad82b278c18108918',
     version: 1,
     config: SDKConfig.vaultConfig,
   },
@@ -88,7 +88,20 @@ export const clmm_mainnet: SdkOptions = {
     env: Env.Mainnet,
     providers: ['CETUS', 'DEEPBOOK', 'KRIYA', 'KRIYAV3', 'FLOWX', 'FLOWXV3', 'AFTERMATH', 'TURBOS', 'HAEDAL', 'VOLO', 'AFSUI'],
   },
-  
 }
 
-export const SDK = new CetusVaultsSDK(clmm_mainnet)
+/**
+ * Initialize the mainnet SDK
+ * @param fullNodeUrl. If provided, it will be used as the full node URL.
+ * @param simulationAccount. If provided, it will be used as the simulation account address.
+ * @returns
+ */
+export function initMainnetSDK(fullNodeUrl?: string, simulationAccount?: string): CetusVaultsSDK {
+  if (fullNodeUrl) {
+    clmmMainnet.fullRpcUrl = fullNodeUrl
+  }
+  if (simulationAccount) {
+    clmmMainnet.simulationAccount.address = simulationAccount
+  }
+  return new CetusVaultsSDK(clmmMainnet)
+}

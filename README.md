@@ -16,7 +16,27 @@ Github Link: https://github.com/CetusProtocol/cetus-vaults-sdk
 
 NPM Link: [@cetusprotocol/vaults-sdk](https://www.npmjs.com/package/@cetusprotocol/vaults-sdk)
 
-### 1. Find all vaults by owner address.
+### 1. Initializing the SDK
+Initialize the SDK with the necessary configuration parameters. Typically, this involves setting up the network and API keys if required:
+- **Mainnet**: 
+
+```typescript
+const MainnetSDK = initCetusVaultsSDK({ env: 'mainnet'})
+```
+
+- **Testnet**: 
+
+```typescript
+const TestnetSDK = initCetusVaultsSDK({ env: 'testnet'})
+```
+
+### 2. Set Wallet Address
+After linking the wallet, the wallet address must be set in the SDK:
+ ```typescript
+sdk.senderAddress = '0x..'
+```
+
+### 3. Find all vaults by owner address.
 
 ```
 const owner = '0x...'
@@ -70,20 +90,20 @@ const vaultsResult = await sdk.Vaults.getOwnerVaultsBalance(owner)
 
 ```
 
-### 2. Get vault by vault id
+### 4. Get vault by vault id
 
 ```
 const vault = await sdk.Vaults.getVault(vaultId)
 ```
 
-### 3. Get vault asset
+### 5. Get vault asset
 
 ```
 const ftAsset = await sdk.getOwnerCoinBalances(sdk.senderAddress, vault?.lp_token_type)
 
 ```
 
-### 4. Deposit
+### 6. Deposit
 
 Deposit Liquidity into vaults，User deposit coinA and coinB into vaults, and the associated LP Token will mint to user.
 
@@ -102,7 +122,7 @@ const txResult = await sdk.fullClient.devInspectTransactionBlock({
 })
 ```
 
-### 5. Withdraw
+### 7. Withdraw
 
 ```
 const result = await sdk.Vaults.calculateWithdrawAmount({

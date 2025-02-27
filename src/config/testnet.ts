@@ -1,6 +1,6 @@
-import { Env } from '@cetusprotocol/aggregator-sdk'
-import { CetusVaultsSDK, SdkOptions } from '../../src/sdk'
 import { getFullnodeUrl } from '@mysten/sui/client'
+import { Env } from '@cetusprotocol/aggregator-sdk'
+import CetusVaultsSDK, { SdkOptions } from '../main'
 
 const SDKConfig = {
   clmmConfig: {
@@ -39,12 +39,11 @@ const SDKConfig = {
     global_config_id: '0x499132a4baf342a0fe9528a3666a77b2aece3be129f4a3ada469fef4b9c34fb4',
     rewarder_manager_id: '0x960c7800e301fd1e47b79037927b426db57b643bd2934f7069d81c2dae092230',
     rewarder_manager_handle: '0x1274149371876b60742cd02071a09f2aa72ffee75b76fdfc45724d98f18ea5b5',
-    admin_cap_id: '0x110175e641c1ea8f9287f4fd59cb6a1fb97a3f3ec595aa30d0e6ed93ac4caa0c'
+    admin_cap_id: '0x110175e641c1ea8f9287f4fd59cb6a1fb97a3f3ec595aa30d0e6ed93ac4caa0c',
   },
-  
 }
 
-export const clmm_testnet: SdkOptions = {
+export const clmmTestnet: SdkOptions = {
   fullRpcUrl: getFullnodeUrl('testnet'),
   simulationAccount: {
     address: '0xcd0247d0b67e53dde69b285e7a748e3dc390e8a5244eb9dd9c5c53d95e4cf0aa',
@@ -80,5 +79,18 @@ export const clmm_testnet: SdkOptions = {
     providers: ['CETUS', 'DEEPBOOK', 'KRIYA', 'KRIYAV3', 'FLOWX', 'FLOWXV3', 'AFTERMATH', 'TURBOS', 'HAEDAL', 'VOLO', 'AFSUI'],
   },
 }
-
-export const TestnetSDK = new CetusVaultsSDK(clmm_testnet)
+/**
+ * Initialize the testnet SDK
+ * @param fullNodeUrl. If provided, it will be used as the full node URL.
+ * @param simulationAccount. If provided, it will be used as the simulation account address.
+ * @returns
+ */
+export function initTestnetSDK(fullNodeUrl?: string, simulationAccount?: string): CetusVaultsSDK {
+  if (fullNodeUrl) {
+    clmmTestnet.fullRpcUrl = fullNodeUrl
+  }
+  if (simulationAccount) {
+    clmmTestnet.simulationAccount.address = simulationAccount
+  }
+  return new CetusVaultsSDK(clmmTestnet)
+}

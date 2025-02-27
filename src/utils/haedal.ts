@@ -31,8 +31,6 @@ export class HaedalUtils {
         sender: shouldRequestStake ? sdk.senderAddress : simulationAccount.address,
       })
 
-      console.log('🚀🚀🚀 ~ file: haedal.ts:35 ~ HaedalUtils ~ getExchangeRateForStake ~ shouldRequestStake:', shouldRequestStake)
-      console.log('🚀🚀🚀 ~ file: haedal.ts:39 ~ HaedalUtils ~ findItem ~ res.events:', JSON.stringify(res.events))
       if (shouldRequestStake) {
         const findItem = res.events.find((item: any) => {
           return item.type.includes('UserStaked')

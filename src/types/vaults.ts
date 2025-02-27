@@ -220,6 +220,7 @@ export type CalculateAmountResult = {
   ft_amount: string
   fix_amount_a: boolean
   swap_result?: SwapAmountResult
+  partner?: string
 }
 
 export type SwapAmountResult = {
@@ -260,6 +261,7 @@ export type DepositParams = {
   fix_amount_a: boolean
   input_amount: string
   slippage: number
+  partner?: string
 }
 
 export type WithdrawBothParams = {
@@ -275,4 +277,5 @@ export type WithdrawOneSideParams = {
   input_amount: string
   max_ft_amount: string
   slippage: number
+  partner?: string
 }
