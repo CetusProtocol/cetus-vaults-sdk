@@ -105,7 +105,7 @@ describe('vaults router', () => {
     const input_amount = new Decimal(8.4654).mul(Decimal.pow(10, 9)).toString()
     const params: DepositParams = {
       vault_id: vaultId,
-      fix_amount_a: true,
+      fix_amount_a: false,
       input_amount: input_amount,
       slippage: 0.01,
       side: InputType.OneSide,
@@ -118,7 +118,7 @@ describe('vaults router', () => {
       transactionBlock: paylod,
       sender: sdk.senderAddress,
     })
-    // console.log('1110 res: ', res.events.length > 0 ? res.events : res)
+    console.log('1110 res: ', res.events.length > 0 ? res.events : res)
   })
 
   test('3 one side deposit fix_amount_a false', async () => {
@@ -135,7 +135,7 @@ describe('vaults router', () => {
       transactionBlock: paylod,
       sender: sdk.senderAddress,
     })
-    // console.log('1110 res: ', res.events.length > 0 ? res.events : res)
+    console.log('1110 res: ', res.events.length > 0 ? res.events : res)
     // const txResult = await sdk.fullClient.sendTransaction(sendKeypair, paylod)
     // console.log('deposit: ', txResult)
   })
@@ -278,6 +278,5 @@ describe('vaults router', () => {
       sender: '0x2a6174f94a2c1d648de290297be27867527a6aaa263a4e0a567c9cd7656d3651',
     })
     console.log('1110 res: ', res.events.length > 0 ? res.events : res)
-
   })
 })
