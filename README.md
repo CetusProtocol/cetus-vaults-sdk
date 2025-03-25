@@ -108,6 +108,15 @@ const ftAsset = await sdk.getOwnerCoinBalances(sdk.senderAddress, vault?.lp_toke
 Deposit Liquidity into vaults，User deposit coinA and coinB into vaults, and the associated LP Token will mint to user.
 
 ```
+ const result = await sdk.Vaults.calculateDepositAmount({
+      vault_id: vaultId,
+      fix_amount_a: true,
+      input_amount: '1000000000',
+      slippage: 0.01,
+      side: InputType.OneSide,
+    })
+    console.log({ result })
+
 const params: DepositParams = {
     vault_id: vaultId,
     fix_amount_a: false,
@@ -115,9 +124,9 @@ const params: DepositParams = {
     slippage: 0.01,
     side: InputType.Both,
 }
-const paylod = await sdk.Vaults.deposit(params)
+const payload = await sdk.Vaults.deposit(params)
 const txResult = await sdk.fullClient.devInspectTransactionBlock({
-    transactionBlock: paylod,
+    transactionBlock: payload,
     sender: sdk.senderAddress,
 })
 ```
@@ -135,9 +144,9 @@ const result = await sdk.Vaults.calculateWithdrawAmount({
     max_ft_amount: '',
 })
 
-const paylod = await sdk.Vaults.withdraw({
+const payload = await sdk.Vaults.withdraw({
     vault_id: vaultId,
     slippage: 0.01,
     ft_amount: result.burn_ft_amount,
 })
-const txResult = await sdk.fullClient.sendTransaction(sendKeypair, paylod)
+const txResult = await sdk.fullClient.sendTransaction(sendKeypair, payload)

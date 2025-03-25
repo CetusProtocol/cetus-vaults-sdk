@@ -609,7 +609,13 @@ export class VaultsModule implements IModule {
       const suiClient = new SuiClient({
         url: this.sdk.sdkOptions.fullRpcUrl,
       })
-      client = new AggregatorClient(aggregator.endPoint, aggregator.walletAddress, suiClient, aggregator.env)
+      client = new AggregatorClient({
+        endpoint: aggregator.endPoint,
+        signer: aggregator.walletAddress,
+        client: suiClient,
+        env: aggregator.env,
+        pythUrls: aggregator.pythUrls,
+      })
     }
     try {
       const findRouterParams: FindRouterParams = {
@@ -957,9 +963,15 @@ export class VaultsModule implements IModule {
         const suiClient = new SuiClient({
           url: this.sdk.sdkOptions.fullRpcUrl,
         })
-        client = new AggregatorClient(aggregator.endPoint, aggregator.walletAddress, suiClient, aggregator.env)
+        client = new AggregatorClient({
+          endpoint: aggregator.endPoint,
+          signer: aggregator.walletAddress,
+          client: suiClient,
+          env: aggregator.env,
+          pythUrls: aggregator.pythUrls,
+        })
       }
-      const toCoin = await client.routerSwap(routerParamsV2)
+      const toCoin = await client.fixableRouterSwap(routerParamsV2)
       coinABs = a2b ? [swapCoinInputFrom.originalSplitedCoin, toCoin] : [toCoin, swapCoinInputFrom.originalSplitedCoin]
     } else {
       const swapCoinInputTo = TransactionUtil.buildCoinForAmount(tx, allCoinAsset, 0n, a2b ? params.coinTypeB : params.coinTypeA, false)
@@ -1184,10 +1196,16 @@ export class VaultsModule implements IModule {
           const suiClient = new SuiClient({
             url: this.sdk.sdkOptions.fullRpcUrl,
           })
-          client = new AggregatorClient(aggregator.endPoint, aggregator.walletAddress, suiClient, aggregator.env)
+          client = new AggregatorClient({
+            endpoint: aggregator.endPoint,
+            signer: aggregator.walletAddress,
+            client: suiClient,
+            env: aggregator.env,
+            pythUrls: aggregator.pythUrls,
+          })
         }
 
-        const toCoin = await client.routerSwap(routerParamsV2)
+        const toCoin = await client.fixableRouterSwap(routerParamsV2)
         const coinABs = a2b ? [swapCoinInputFrom.targetCoin, toCoin] : [toCoin, swapCoinInputFrom.targetCoin]
 
         if (a2b) {

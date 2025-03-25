@@ -1,10 +1,11 @@
-import { printTransaction } from '@cetusprotocol/cetus-sui-clmm-sdk'
+import { ClmmPoolUtil, printTransaction, TickMath } from '@cetusprotocol/cetus-sui-clmm-sdk'
 import { Ed25519Keypair } from '@mysten/sui/keypairs/ed25519'
 import 'isomorphic-fetch'
 import { DepositParams, InputType } from '../src/types/vaults'
 import { SdkEnv, buildSdk, buildTestAccount } from './data/init_test_data'
 import Decimal from 'decimal.js'
 import { initCetusVaultsSDK } from '../src/config/config'
+import BN from 'bn.js'
 
 const vaultId = '0xde97452e63505df696440f86f0b805263d8659b77b8c316739106009d514c270'
 
@@ -74,7 +75,7 @@ describe('vaults router', () => {
     const result = await sdk.Vaults.calculateDepositAmount({
       vault_id: vaultId,
       fix_amount_a: false,
-      input_amount: '1000000000',
+      input_amount: '10000000',
       slippage: 0.01,
       side: InputType.OneSide,
     })
@@ -85,7 +86,7 @@ describe('vaults router', () => {
     const params: DepositParams = {
       vault_id: vaultId,
       fix_amount_a: false,
-      input_amount: '1000000000',
+      input_amount: '10000000',
       slippage: 0.01,
       side: InputType.Both,
     }
@@ -102,7 +103,7 @@ describe('vaults router', () => {
   })
 
   test('2 one side deposit fix_amount_a true', async () => {
-    const input_amount = new Decimal(8.4654).mul(Decimal.pow(10, 9)).toString()
+    const input_amount = new Decimal(5).mul(Decimal.pow(10, 9)).toString()
     const params: DepositParams = {
       vault_id: vaultId,
       fix_amount_a: false,
@@ -125,7 +126,7 @@ describe('vaults router', () => {
     const params: DepositParams = {
       vault_id: vaultId,
       fix_amount_a: true,
-      input_amount: '1000000000',
+      input_amount: '1000000',
       slippage: 0.01,
       side: InputType.OneSide,
     }
@@ -278,5 +279,39 @@ describe('vaults router', () => {
       sender: '0x2a6174f94a2c1d648de290297be27867527a6aaa263a4e0a567c9cd7656d3651',
     })
     console.log('1110 res: ', res.events.length > 0 ? res.events : res)
+  })
+
+  test('22222withdraw', async () => {
+    const currentTick = TickMath.sqrtPriceX64ToTickIndex(new BN('18447878183175709242'))
+    const lowerTick = currentTick - 250
+    const upperTick = currentTick + 250
+
+    const liquidityInput = ClmmPoolUtil.estLiquidityAndcoinAmountFromOneAmounts(
+      lowerTick,
+      upperTick,
+      new BN(1000000000),
+      true,
+      true,
+      0,
+      new BN('18447878183175709242')
+    )
+    const amount_a = liquidityInput.coinAmountA.toString()
+    const amount_b = liquidityInput.coinAmountB.toString()
+    console.log('amount_a: ', { amount_a, amount_b, currentTick })
+
+    const currentTick2 = TickMath.sqrtPriceX64ToTickIndex(new BN('18467878183275719242'))
+
+    const liquidityInput2 = ClmmPoolUtil.estLiquidityAndcoinAmountFromOneAmounts(
+      lowerTick,
+      upperTick,
+      new BN(1000000000),
+      true,
+      true,
+      0,
+      new BN('18447878183275719242')
+    )
+    const amount_a2 = liquidityInput2.coinAmountA.toString()
+    const amount_b2 = liquidityInput2.coinAmountB.toString()
+    console.log('amount_a2: ', { amount_a2, amount_b2, currentTick2 })
   })
 })

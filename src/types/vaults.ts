@@ -187,6 +187,7 @@ export type AggregatorCoinfig = {
   walletAddress: string
   env: Env
   providers: string[]
+  pythUrls?: string[]
 }
 
 export enum SuiStakeProtocol {

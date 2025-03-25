@@ -87,6 +87,7 @@ export const clmmMainnet: SdkOptions = {
     walletAddress: '0xfba94aa36e93ccc7d84a6a57040fc51983223f1b522a8d0be3c3bf2c98977ebb',
     env: Env.Mainnet,
     providers: ['CETUS', 'DEEPBOOK', 'KRIYA', 'KRIYAV3', 'FLOWX', 'FLOWXV3', 'AFTERMATH', 'TURBOS', 'HAEDAL', 'VOLO', 'AFSUI'],
+    pythUrls: [],
   },
 }
 
