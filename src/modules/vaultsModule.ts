@@ -1,3 +1,4 @@
+/* eslint-disable import/no-extraneous-dependencies */
 /* eslint-disable no-useless-catch */
 import { AggregatorClient, FindRouterParams, PreSwapLpChangeParams } from '@cetusprotocol/aggregator-sdk'
 import {
@@ -15,7 +16,7 @@ import {
   getObjectFields,
 } from '@cetusprotocol/cetus-sui-clmm-sdk'
 import { SuiClient } from '@mysten/sui/client'
-import { Transaction, TransactionArgument, TransactionObjectArgument } from '@mysten/sui/transactions'
+import { coinWithBalance, Transaction, TransactionArgument, TransactionObjectArgument, TransactionResult } from '@mysten/sui/transactions'
 import { BN } from 'bn.js'
 import Decimal from 'decimal.js'
 import { IModule } from '../interfaces/IModule'
@@ -58,7 +59,7 @@ export class VaultsModule implements IModule {
 
   async calculateDepositAmount(
     params: CalculateAmountParams,
-    shouldRequestStake = false,
+    shouldRequestStake = true,
     adjustBestAmount = false
   ): Promise<CalculateAmountResult> {
     if (params.side === InputType.Both) {
@@ -289,10 +290,12 @@ export class VaultsModule implements IModule {
       }
 
       let swapData
+      let paresSwapData
       let afterSqrtPrice
       let fixAmountA
       let swapInAmount
       let swapOutAmount
+      let swapOutAmountLimit
       const suiStakeProtocol = this.findSuiStakeProtocol(position.coinTypeA, position.coinTypeB, fix_amount_a)
       if (suiStakeProtocol !== SuiStakeProtocol.Cetus) {
         swapData = await this.calculateStakeDepositFixSui({
@@ -307,12 +310,14 @@ export class VaultsModule implements IModule {
           shouldRequestStake,
           leftSuiAmount: a2b ? new Decimal(swapAmount.toFixed(0)) : new Decimal(0),
           rightSuiAmount: a2b ? new Decimal(params.input_amount) : new Decimal(swapAmount.toFixed(0)),
+          slippage,
           stakeProtocol: suiStakeProtocol,
         })
         afterSqrtPrice = pool.current_sqrt_price.toString()
         fixAmountA = swapData.fixAmountA
         swapInAmount = swapData.swapInAmount
         swapOutAmount = swapData.swapOutAmount
+        swapOutAmountLimit = swapData.swapOutAmountLimit
       } else {
         swapData = await this.findRouters(
           pool.poolAddress,
@@ -324,7 +329,7 @@ export class VaultsModule implements IModule {
           [pool.poolAddress]
         )
 
-        let paresSwapData = this.paresSwapData(
+        paresSwapData = this.paresSwapData(
           swapData,
           params.input_amount,
           params.fix_amount_a,
@@ -332,8 +337,10 @@ export class VaultsModule implements IModule {
           lowerTick,
           upperTick,
           ratioA,
-          ratioB
+          ratioB,
+          slippage
         )
+        swapOutAmountLimit = paresSwapData.swapOutAmountLimit
         const maxRemaining = d(params.input_amount).mul(maxRemainRate)
         if (d(params.input_amount).sub(paresSwapData.preAmountTotal).gt(maxRemaining)) {
           const rebalanceParams = {
@@ -371,15 +378,30 @@ export class VaultsModule implements IModule {
 
         afterSqrtPrice = swapData.after_sqrt_price
 
-        paresSwapData = this.paresSwapData(swapData, params.input_amount, params.fix_amount_a, a2b, lowerTick, upperTick, ratioA, ratioB)
-
+        paresSwapData = this.paresSwapData(
+          swapData,
+          params.input_amount,
+          params.fix_amount_a,
+          a2b,
+          lowerTick,
+          upperTick,
+          ratioA,
+          ratioB,
+          slippage
+        )
+        swapOutAmountLimit = paresSwapData.swapOutAmountLimit
         fixAmountA = paresSwapData.fixAmountA
         swapInAmount = paresSwapData.swapInAmount
         swapOutAmount = paresSwapData.swapOutAmount
         afterSqrtPrice = paresSwapData.afterSqrtPrice
       }
 
-      const coinAmount = fixAmountA === fix_amount_a ? d(input_amount).sub(swapInAmount).toFixed(0) : swapOutAmount
+      const coinAmount =
+        fixAmountA === fix_amount_a
+          ? d(input_amount).sub(swapInAmount).toFixed(0)
+          : suiStakeProtocol === SuiStakeProtocol.Cetus
+          ? swapOutAmountLimit
+          : swapOutAmount
 
       const liquidityInput = ClmmPoolUtil.estLiquidityAndcoinAmountFromOneAmounts(
         lowerTick,
@@ -403,6 +425,7 @@ export class VaultsModule implements IModule {
         amount_limit_a: liquidityInput.tokenMaxA.toString(),
         amount_limit_b: liquidityInput.tokenMaxB.toString(),
         ft_amount: lpAmount,
+        original_input_amount: params.input_amount,
         fix_amount_a: fixAmountA,
         swap_result: {
           swap_in_amount: swapInAmount,
@@ -430,7 +453,8 @@ export class VaultsModule implements IModule {
     lowerTick: number,
     upperTick: number,
     ratioA: Decimal,
-    ratioB: Decimal
+    ratioB: Decimal,
+    slippage: number
   ) {
     const afterSqrtPrice = swapData.after_sqrt_price
     const currentTick = TickMath.sqrtPriceX64ToTickIndex(new BN(afterSqrtPrice))
@@ -442,8 +466,11 @@ export class VaultsModule implements IModule {
         ? new BN(swapData.amount_in).add(new BN(swapData.fee_amount)).toString()
         : swapData.amount_in
     const swapOutAmount = swapData.amount_out
+    const swapOutAmountLimit = d(swapData.amount_out)
+      .mul(1 - slippage)
+      .toFixed(0)
 
-    const coinAmount = fixAmountA === a2b ? new BN(d(input_amount).sub(swapInAmount).toString()) : new BN(swapOutAmount)
+    const coinAmount = fixAmountA === a2b ? new BN(d(input_amount).sub(swapInAmount).toString()) : new BN(swapOutAmountLimit)
 
     let preAmountTotal = d(input_amount)
 
@@ -476,6 +503,7 @@ export class VaultsModule implements IModule {
       fixAmountA,
       swapInAmount,
       swapOutAmount,
+      swapOutAmountLimit,
       afterSqrtPrice,
     }
   }
@@ -496,6 +524,7 @@ export class VaultsModule implements IModule {
     rebalanceCount: number
     shouldRequestStake: boolean
     stakeProtocol: SuiStakeProtocol
+    slippage: number
     exchangeRate?: string
   }): Promise<any | null> {
     // if (params.swapSuiAmount.lessThan(1000000000)) {
@@ -540,6 +569,9 @@ export class VaultsModule implements IModule {
       return {
         swapInAmount: params.swapSuiAmount.toFixed(0),
         swapOutAmount: hasuiAmount,
+        swapOutAmountLimit: d(hasuiAmount)
+          .mul(1 - params.slippage)
+          .toFixed(0),
         afterSqrtPrice: params.curSqrtPrice,
         fixAmountA: !params.fixCoinA,
         is_exceed: true,
@@ -836,6 +868,7 @@ export class VaultsModule implements IModule {
       amount_b: liquidityInput.coinAmountB.toString(),
       amount_limit_a: liquidityInput.tokenMaxA.toString(),
       amount_limit_b: liquidityInput.tokenMaxB.toString(),
+      original_input_amount: params.input_amount,
       ft_amount,
       fix_amount_a,
       side: InputType.Both,
@@ -871,37 +904,80 @@ export class VaultsModule implements IModule {
     }
   }
 
-  async deposit(params: DepositParams): Promise<Transaction> {
-    const { vault_id } = params
-    const { vault, pool } = await this.getVaultAndPool(vault_id, true)
+  async deposit(params: DepositParams, tx: Transaction): Promise<TransactionObjectArgument | undefined> {
+    const { vault_id, slippage, coin_object_a, coin_object_b, return_lp_token, deposit_result } = params
+    const { swap_result, amount_a, amount_b, fix_amount_a, partner, side, original_input_amount } = deposit_result
+    const { vault, pool } = await this.getVaultAndPool(vault_id, false)
 
-    const result = await this.calculateDepositAmount(params, true, true)
-
-    const tx = new Transaction()
     let primaryCoinAInputs
     let primaryCoinBInputs
-    if (params.side === InputType.OneSide && result.swap_result) {
-      const res = await this.handleDepositSwap(
+    let in_coin
+    if (side === InputType.OneSide && swap_result) {
+      in_coin =
+        (swap_result.a2b ? coin_object_a : coin_object_b) ||
+        tx.add(coinWithBalance({ balance: BigInt(original_input_amount), type: swap_result.a2b ? pool.coinTypeA : pool.coinTypeB }))
+
+      const spitAmounts = [
+        swap_result.swap_in_amount,
+        d(original_input_amount).sub(d(swap_result.swap_in_amount)).toFixed(0, Decimal.ROUND_DOWN),
+      ]
+      const [swap_in_coin, amount_coin] = tx.splitCoins(in_coin, spitAmounts)
+
+      console.log('spitCoins spitAmounts:', spitAmounts)
+
+      const { swap_out_coin } = await this.handleDepositSwap(
         {
-          ...result,
           coinTypeA: pool.coinTypeA,
           coinTypeB: pool.coinTypeB,
-          slippage: params.slippage,
-          clmm_pool: pool.poolAddress,
+          slippage,
+          clmm_pool_address: pool.poolAddress,
+          partner,
+          swap_in_amount: swap_result.swap_in_amount,
+          swap_in_coin,
+          a2b: swap_result.a2b,
+          sui_stake_protocol: swap_result.sui_stake_protocol,
+          route_obj: swap_result.route_obj,
         },
         tx
       )
-      primaryCoinAInputs = res.primaryCoinAInputs
-      primaryCoinBInputs = res.primaryCoinBInputs
+      if (swap_result.a2b) {
+        primaryCoinAInputs = amount_coin
+        primaryCoinBInputs = swap_out_coin
+      } else {
+        primaryCoinAInputs = swap_out_coin
+        primaryCoinBInputs = amount_coin
+      }
     }
 
-    let { amount_a, amount_b } = result
-    if (params.side === InputType.OneSide && params.fix_amount_a) {
-      amount_a = d(result.amount_a).mul(d(1).sub(0.001)).toFixed(0, Decimal.ROUND_DOWN).toString()
-      amount_b = d(result.amount_b).mul(d(1).sub(0.001)).toFixed(0, Decimal.ROUND_DOWN).toString()
+    let amount_a_limit = d(amount_a).mul(d(1).add(slippage)).toFixed(0, Decimal.ROUND_DOWN).toString()
+    let amount_b_limit = d(amount_b).mul(d(1).add(slippage)).toFixed(0, Decimal.ROUND_DOWN).toString()
+    let fix_amount = fix_amount_a ? amount_a : amount_b
+
+    if (side === InputType.OneSide && swap_result) {
+      amount_a_limit = '18446744073709551615'
+      amount_b_limit = '18446744073709551615'
+      if (swap_result.a2b) {
+        fix_amount = d(fix_amount).mul(d(1).sub(0.001)).toFixed(0, Decimal.ROUND_DOWN).toString()
+        primaryCoinAInputs =
+          primaryCoinAInputs ||
+          VaultsUtils.buildCoinWithBalance(BigInt(fix_amount_a ? amount_a : deposit_result.amount_limit_a), pool.coinTypeA, tx)
+      } else {
+        primaryCoinBInputs =
+          primaryCoinBInputs ||
+          VaultsUtils.buildCoinWithBalance(
+            BigInt(fix_amount_a ? deposit_result.amount_limit_b : deposit_result.amount_b),
+            pool.coinTypeB,
+            tx
+          )
+      }
+    } else {
+      primaryCoinAInputs =
+        coin_object_a || VaultsUtils.buildCoinWithBalance(BigInt(fix_amount_a ? amount_a : amount_a_limit), pool.coinTypeA, tx)
+      primaryCoinBInputs =
+        coin_object_b || VaultsUtils.buildCoinWithBalance(BigInt(fix_amount_a ? amount_b_limit : amount_b), pool.coinTypeB, tx)
     }
 
-    await this.depositInternal(
+    const lpCoin = await this.depositInternal(
       {
         coinTypeA: pool.coinTypeA,
         coinTypeB: pool.coinTypeB,
@@ -912,51 +988,64 @@ export class VaultsModule implements IModule {
         primaryCoinBInputs,
         vault_id,
         slippage: params.slippage,
-        amount_a: result.fix_amount_a ? amount_a : result.amount_limit_a,
-        amount_b: result.fix_amount_a ? result.amount_limit_b : amount_b,
-        fix_amount_a: result.fix_amount_a,
+        amount_a: fix_amount_a ? fix_amount : amount_a_limit,
+        amount_b: fix_amount_a ? amount_b_limit : fix_amount,
+        fix_amount_a,
+        return_lp_token,
       },
       tx
     )
-    return tx
+
+    if (swap_result && in_coin) {
+      tx.transferObjects([in_coin], tx.pure.address(this._sdk.getVerifySenderAddress()))
+    }
+
+    if (return_lp_token) {
+      return lpCoin
+    }
+
+    return undefined
   }
 
   private async handleDepositSwap(
-    params: CalculateAmountResult & {
+    params: {
+      partner: any
       coinTypeA: string
       coinTypeB: string
       slippage: number
-      clmm_pool: string
-      amount_a: string
+      clmm_pool_address: string
+      swap_in_amount: string
+      swap_in_coin: TransactionArgument
+      a2b: boolean
+      sui_stake_protocol: SuiStakeProtocol
+      route_obj?: any
     },
     tx: Transaction
   ) {
-    const allCoinAsset = await this._sdk.getOwnerCoinAssets(this._sdk.senderAddress)
+    const { partner, coinTypeA, coinTypeB, slippage, clmm_pool_address, swap_in_amount, a2b, sui_stake_protocol, route_obj, swap_in_coin } =
+      params
     const { clmm_pool, integrate } = this._sdk.sdkOptions
-    const { swap_in_amount, a2b, sui_stake_protocol, route_obj } = params.swap_result!
-    const fromCoinType = a2b ? params.coinTypeA : params.coinTypeB
-    const swapCoinInputFrom = TransactionUtil.buildCoinForAmount(tx, allCoinAsset, BigInt(swap_in_amount), fromCoinType, false, true)
-    const selectedUnusedAmount = BigInt(swapCoinInputFrom.tragetCoinAmount) - BigInt(swap_in_amount)
-
-    let coinABs: TransactionArgument[] = []
+    const swapCoinInputFrom = swap_in_coin
 
     if (sui_stake_protocol !== SuiStakeProtocol.Cetus) {
-      const haSuiCoin = this.requestStakeCoin(sui_stake_protocol, tx, swapCoinInputFrom.targetCoin)!
-      const suiCoin = TransactionUtil.buildCoinForAmount(tx, swapCoinInputFrom.remainCoins, BigInt(0), fromCoinType, false).targetCoin
-      coinABs = a2b ? [suiCoin, haSuiCoin] : [haSuiCoin, suiCoin]
-    } else if (route_obj) {
+      const haSuiCoin = this.requestStakeCoin(sui_stake_protocol, tx, swapCoinInputFrom)!
+      return {
+        swap_out_coin: haSuiCoin,
+      }
+    }
+    if (route_obj) {
       const routerParamsV2 = {
         routers: route_obj,
-        inputCoin: swapCoinInputFrom.targetCoin,
-        slippage: params.slippage,
+        inputCoin: swapCoinInputFrom,
+        slippage,
         txb: tx,
-        partner: params.partner,
+        partner,
       }
 
       const { aggregator } = this._sdk.sdkOptions
       const cacheKey = `${aggregator.walletAddress}_getAggregatorClient`
-      const cacheClient = this.getCache(cacheKey, false)
-      let client: any
+      const cacheClient = this.getCache<AggregatorClient>(cacheKey, false)
+      let client: AggregatorClient
       if (cacheClient !== undefined) {
         client = cacheClient
       } else {
@@ -972,66 +1061,38 @@ export class VaultsModule implements IModule {
         })
       }
       const toCoin = await client.fixableRouterSwap(routerParamsV2)
-      coinABs = a2b ? [swapCoinInputFrom.originalSplitedCoin, toCoin] : [toCoin, swapCoinInputFrom.originalSplitedCoin]
-    } else {
-      const swapCoinInputTo = TransactionUtil.buildCoinForAmount(tx, allCoinAsset, 0n, a2b ? params.coinTypeB : params.coinTypeA, false)
-      const sqrtPriceLimit = SwapUtils.getDefaultSqrtPriceLimit(a2b).toString()
-      coinABs = tx.moveCall({
-        target: `${integrate.published_at}::${ClmmIntegrateRouterModule}::swap`,
-        typeArguments: [params.coinTypeA, params.coinTypeB],
-        arguments: [
-          tx.object(getPackagerConfigs(clmm_pool).global_config_id),
-          tx.object(params.clmm_pool),
-          a2b ? swapCoinInputFrom.targetCoin : swapCoinInputTo.targetCoin,
-          a2b ? swapCoinInputTo.targetCoin : swapCoinInputFrom.targetCoin,
-          tx.pure.bool(a2b),
-          tx.pure.bool(true),
-          tx.pure.u64(swap_in_amount),
-          tx.pure.u128(sqrtPriceLimit),
-          tx.pure.bool(false),
-          tx.object(CLOCK_ADDRESS),
-        ],
-      })
-    }
 
-    let primaryCoinAInputs
-
-    let primaryCoinBInputs
-
-    const coinAObj = coinABs[0] as TransactionObjectArgument
-    const coinBObj = coinABs[1] as TransactionObjectArgument
-    if (a2b) {
-      const additionalRequiredAmount = BigInt(params.amount_a) - selectedUnusedAmount
-
-      if (CoinAssist.isSuiCoin(fromCoinType)) {
-        if (!route_obj) {
-          tx.transferObjects([coinAObj], tx.pure.address(this._sdk.getVerifySenderAddress()))
-        }
-        primaryCoinAInputs = tx.splitCoins(tx.gas, [tx.pure.u64(params.amount_a)])
-      } else if (additionalRequiredAmount > 0n) {
-        const coinAResult = this.buildCoinInput(tx, swapCoinInputFrom.remainCoins, fromCoinType, additionalRequiredAmount, coinAObj)
-        primaryCoinAInputs = coinAResult.coinInput
-      } else {
-        primaryCoinAInputs = coinAObj
-      }
-      primaryCoinBInputs = coinBObj
-    } else {
-      primaryCoinAInputs = coinAObj
-      const additionalRequiredAmount = BigInt(params.amount_b) - selectedUnusedAmount
-      if (CoinAssist.isSuiCoin(fromCoinType)) {
-        if (!route_obj) {
-          tx.transferObjects([coinBObj], tx.pure.address(this._sdk.getVerifySenderAddress()))
-        }
-        primaryCoinBInputs = tx.splitCoins(tx.gas, [tx.pure.u64(params.amount_b)])
-      } else if (additionalRequiredAmount > 0n) {
-        const coinBResult = this.buildCoinInput(tx, swapCoinInputFrom.remainCoins, fromCoinType, additionalRequiredAmount, coinBObj)
-        primaryCoinBInputs = coinBResult.coinInput
-      } else {
-        primaryCoinBInputs = coinBObj
+      return {
+        swap_out_coin: toCoin,
       }
     }
+    const swapCoinInputTo = VaultsUtils.buildCoinWithBalance(BigInt(0), a2b ? params.coinTypeB : params.coinTypeA, tx)
+    const sqrtPriceLimit = SwapUtils.getDefaultSqrtPriceLimit(a2b).toString()
+    const coinABs = tx.moveCall({
+      target: `${integrate.published_at}::${ClmmIntegrateRouterModule}::swap`,
+      typeArguments: [coinTypeA, coinTypeB],
+      arguments: [
+        tx.object(getPackagerConfigs(clmm_pool).global_config_id),
+        tx.object(clmm_pool_address),
+        a2b ? swapCoinInputFrom : swapCoinInputTo,
+        a2b ? swapCoinInputTo : swapCoinInputFrom,
+        tx.pure.bool(a2b),
+        tx.pure.bool(true),
+        tx.pure.u64(swap_in_amount),
+        tx.pure.u128(sqrtPriceLimit),
+        tx.pure.bool(false),
+        tx.object(CLOCK_ADDRESS),
+      ],
+    })
 
-    return { primaryCoinAInputs, primaryCoinBInputs }
+    const swapOutCoin = a2b ? coinABs[1] : coinABs[0]
+    const remainSwapInCoin = a2b ? coinABs[0] : coinABs[1]
+
+    tx.transferObjects([remainSwapInCoin], tx.pure.address(this._sdk.getVerifySenderAddress()))
+
+    return {
+      swap_out_coin: swapOutCoin,
+    }
   }
 
   /**
@@ -1070,12 +1131,13 @@ export class VaultsModule implements IModule {
       clmm_pool: string
       primaryCoinAInputs?: TransactionObjectArgument
       primaryCoinBInputs?: TransactionObjectArgument
+      return_lp_token?: boolean
     },
     tx: Transaction
   ) {
     const { vaults, frams, clmm_pool } = this._sdk.sdkOptions
     const vaultsConfigs = getPackagerConfigs(vaults)
-    const framsConfigs = getPackagerConfigs(frams)
+    const farmsConfigs = getPackagerConfigs(frams)
     const clmmPoolConfigs = getPackagerConfigs(clmm_pool)
 
     let { primaryCoinAInputs, primaryCoinBInputs } = params
@@ -1103,25 +1165,38 @@ export class VaultsModule implements IModule {
       )?.targetCoin
     }
 
+    const args = [
+      tx.object(vaultsConfigs.vaults_manager_id),
+      tx.object(params.vault_id),
+      tx.object(farmsConfigs.rewarder_manager_id),
+      tx.object(farmsConfigs.global_config_id),
+      tx.object(params.farming_pool),
+      tx.object(clmmPoolConfigs.global_config_id),
+      tx.object(params.clmm_pool),
+      primaryCoinAInputs,
+      primaryCoinBInputs,
+      tx.pure.u64(params.amount_a),
+      tx.pure.u64(params.amount_b),
+      tx.pure.bool(params.fix_amount_a),
+      tx.object(CLOCK_ADDRESS),
+    ]
+
+    const typeArguments = [params.coinTypeA, params.coinTypeB, params.lp_token_type]
+
+    if (params.return_lp_token) {
+      return tx.moveCall({
+        target: `${vaults.published_at}::${VaultsVaultModule}::deposit`,
+        typeArguments,
+        arguments: args,
+      })
+    }
     tx.moveCall({
       target: `${vaults.published_at}::${VaultsRouterModule}::deposit`,
-      typeArguments: [params.coinTypeA, params.coinTypeB, params.lp_token_type],
-      arguments: [
-        tx.object(vaultsConfigs.vaults_manager_id),
-        tx.object(params.vault_id),
-        tx.object(framsConfigs.rewarder_manager_id),
-        tx.object(framsConfigs.global_config_id),
-        tx.object(params.farming_pool),
-        tx.object(clmmPoolConfigs.global_config_id),
-        tx.object(params.clmm_pool),
-        primaryCoinAInputs,
-        primaryCoinBInputs,
-        tx.pure.u64(params.amount_a),
-        tx.pure.u64(params.amount_b),
-        tx.pure.bool(params.fix_amount_a),
-        tx.object(CLOCK_ADDRESS),
-      ],
+      typeArguments,
+      arguments: args,
     })
+
+    return undefined
   }
 
   async withdraw(params: WithdrawBothParams | WithdrawOneSideParams): Promise<Transaction> {

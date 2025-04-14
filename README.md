@@ -105,35 +105,62 @@ const ftAsset = await sdk.getOwnerCoinBalances(sdk.senderAddress, vault?.lp_toke
 
 ### 6. Deposit
 
-Deposit Liquidity into vaults，User deposit coinA and coinB into vaults, and the associated LP Token will mint to user.
+Deposit Liquidity into vaults，User deposit coinA and coinB into vaults, and the associated LP Token will mint to user
 
 ```
- const result = await sdk.Vaults.calculateDepositAmount({
-      vault_id: vaultId,
-      fix_amount_a: true,
-      input_amount: '1000000000',
-      slippage: 0.01,
-      side: InputType.OneSide,
-    })
-    console.log({ result })
 
-const params: DepositParams = {
+const input_amount = toDecimalsAmount(3, 9).toString()
+
+/**
+ * @param {Object} params - The parameters for the deposit function.
+ * @param {string} params.vault_id - The ID of the vault.
+ * @param {number} params.slippage - The slippage percentage.
+ * @param {string} params.deposit_result - The amount of coin A.
+ * @param {Object} [params.swap_result] - The result of the calculateDepositAmount.
+ * @param {Object} [params.coin_object_a] - Optional. The coin object for coin A. If provided, it will be used.
+ * @param {Object} [params.coin_object_b] - Optional. The coin object for coin B. If provided, it will be used.
+ * @param {boolean} [params.return_lp_token] - Optional. If set to true, returns the LP coin. The user needs to handle it. 
+ */
+const result = await sdk.Vaults.calculateDepositAmount({
     vault_id: vaultId,
     fix_amount_a: false,
-    input_amount: '1000000000',
+    input_amount,
     slippage: 0.01,
-    side: InputType.Both,
-}
-const payload = await sdk.Vaults.deposit(params)
-const txResult = await sdk.fullClient.devInspectTransactionBlock({
-    transactionBlock: payload,
-    sender: sdk.senderAddress,
+    side: InputType.OneSide,
 })
+console.log({ result })
+
+const tx = new Transaction()
+const params: DepositParams = {
+    vault_id: vaultId,
+    slippage: 0.01,
+    deposit_result: result,
+    return_lp_token: true,
+}
+
+const lp_coin = await sdk.Vaults.deposit(params, tx)
+
+if (lp_coin) {
+  tx.transferObjects([lp_coin], sdk.senderAddress)
+}
 ```
+
 
 ### 7. Withdraw
 
+Withdraw Liquidity from vaults，User withdraw coinA and coinB from vaults, and the associated LP Token will be burned
+
 ```
+/**
+ * @param {Object} params - The parameters for the calculateWithdrawAmount function.
+ * @param {string} params.vault_id - The ID of the vault.
+ * @param {boolean} params.fix_amount_a - Whether to fix the amount of token A. If true, the input_amount represents token A amount; if false, it represents token B amount.
+ * @param {string} params.input_amount - The input amount. If is_ft_input is true, this is the LP token amount; if false, this is the token amount (either A or B based on fix_amount_a).
+ * @param {number} params.slippage - The slippage percentage (eg: 0.01 = 1%)
+ * @param {boolean} params.is_ft_input - Whether the input is LP token. If true, input_amount is LP token amount; if false, input_amount is token amount.
+ * @param {InputType} params.side - The withdrawal type. Both for withdrawing both tokens, OneSide for withdrawing a single token.
+ * @param {string} params.max_ft_amount - The amount of LP tokens held by the user. In OneSide mode, this value is used to balance the withdrawal amount.
+ */
 const result = await sdk.Vaults.calculateWithdrawAmount({
     vault_id: vaultId,
     fix_amount_a: true,
@@ -144,9 +171,16 @@ const result = await sdk.Vaults.calculateWithdrawAmount({
     max_ft_amount: '',
 })
 
+/**
+ * @param {Object} params - The parameters for the withdraw function.
+ * @param {string} params.vault_id - The ID of the vault.
+ * @param {number} params.slippage - The slippage percentage (0-1).
+ * @param {string} params.ft_amount - The amount of LP tokens to burn.
+ */
 const payload = await sdk.Vaults.withdraw({
     vault_id: vaultId,
     slippage: 0.01,
     ft_amount: result.burn_ft_amount,
 })
 const txResult = await sdk.fullClient.sendTransaction(sendKeypair, payload)
+```

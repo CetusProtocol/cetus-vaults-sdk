@@ -144,7 +144,7 @@ export class CetusVaultsSDK {
 
   getVerifySenderAddress() {
     if (this.senderAddress.length === 0 || !isValidSuiAddress(this.senderAddress)) {
-      throw Error('this clmm config sdk senderAddess is illegal')
+      throw Error('this clmm config sdk senderAdders is illegal')
     }
     return this.senderAddress
   }

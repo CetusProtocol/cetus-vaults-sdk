@@ -1,4 +1,4 @@
-import { ClmmPoolUtil, printTransaction, TickMath } from '@cetusprotocol/cetus-sui-clmm-sdk'
+import { ClmmPoolUtil, printTransaction, TickMath, toDecimalsAmount } from '@cetusprotocol/cetus-sui-clmm-sdk'
 import { Ed25519Keypair } from '@mysten/sui/keypairs/ed25519'
 import 'isomorphic-fetch'
 import { DepositParams, InputType } from '../src/types/vaults'
@@ -6,6 +6,8 @@ import { SdkEnv, buildSdk, buildTestAccount } from './data/init_test_data'
 import Decimal from 'decimal.js'
 import { initCetusVaultsSDK } from '../src/config/config'
 import BN from 'bn.js'
+import { Transaction } from '@mysten/sui/transactions'
+import { VaultsUtils } from '../src/utils/vaults'
 
 const vaultId = '0xde97452e63505df696440f86f0b805263d8659b77b8c316739106009d514c270'
 
@@ -49,96 +51,132 @@ describe('vaults router', () => {
     console.log('vault: ', vault)
   })
 
-  test('1  calculate both amount', async () => {
-    const result = await sdk.Vaults.calculateDepositAmount({
-      vault_id: vaultId,
-      fix_amount_a: false,
-      input_amount: '1000000000',
-      slippage: 0.01,
-      side: InputType.Both,
-    })
-    console.log({ result })
-  })
-
-  test('2 calculate one side amount fix_amount_a true', async () => {
+  test('1 both side deposit', async () => {
     const result = await sdk.Vaults.calculateDepositAmount({
       vault_id: vaultId,
       fix_amount_a: true,
-      input_amount: '1000000000',
-      slippage: 0.01,
-      side: InputType.OneSide,
-    })
-    console.log({ result })
-  })
-
-  test('3 calculate one side amount fix_amount_a false', async () => {
-    const result = await sdk.Vaults.calculateDepositAmount({
-      vault_id: vaultId,
-      fix_amount_a: false,
-      input_amount: '10000000',
-      slippage: 0.01,
-      side: InputType.OneSide,
-    })
-    console.log({ result })
-  })
-
-  test('1 both side deposit', async () => {
-    const params: DepositParams = {
-      vault_id: vaultId,
-      fix_amount_a: false,
-      input_amount: '10000000',
+      input_amount: toDecimalsAmount(1, 9).toString(),
       slippage: 0.01,
       side: InputType.Both,
-    }
-    const paylod = await sdk.Vaults.deposit(params)
-    printTransaction(paylod)
-    // const txResult = await sdk.fullClient.sendTransaction(sendKeypair, paylod)
-    // console.log('deposit: ', txResult)
-    console.log('🚀🚀🚀 ~ file: vaults_deposit_aftermath.test.ts:168 ~ test ~ sdk.ClmmSDK.senderAddress:', sdk.senderAddress)
-    const res = await sdk.fullClient.devInspectTransactionBlock({
-      transactionBlock: paylod,
-      sender: sdk.senderAddress,
     })
+    console.log({ result })
+
+    const tx = new Transaction()
+    const params: DepositParams = {
+      vault_id: vaultId,
+      slippage: 0.01,
+      deposit_result: result,
+      coin_object_a: VaultsUtils.buildCoinWithBalance(
+        BigInt(result.fix_amount_a ? result.amount_a : result.amount_limit_a),
+        '0xbde4ba4c2e274a60ce15c1cfff9e5c42e41654ac8b6d906a57efa4bd3c29f47d::hasui::HASUI',
+        tx
+      ),
+      coin_object_b: VaultsUtils.buildCoinWithBalance(
+        BigInt(result.fix_amount_a ? result.amount_limit_b : result.amount_b),
+        '0x0000000000000000000000000000000000000000000000000000000000000002::sui::SUI',
+        tx
+      ),
+    }
+
+    await sdk.Vaults.deposit(params, tx)
+
+    tx.getData().commands.forEach((command, index) => {
+      console.log('command: ', index, command)
+    })
+
+    const txResult = await sdk.fullClient.sendTransaction(sendKeypair, tx)
+    console.log('deposit: ', txResult)
+    // console.log('🚀🚀🚀 ~ file: vaults_deposit_aftermath.test.ts:168 ~ test ~ sdk.ClmmSDK.senderAddress:', sdk.senderAddress)
+    // const res = await sdk.fullClient.devInspectTransactionBlock({
+    //   transactionBlock: tx,
+    //   sender: sdk.senderAddress,
+    // })
     // console.log('1110 res: ', res.events.length > 0 ? res.events : res)
   })
 
   test('2 one side deposit fix_amount_a true', async () => {
-    const input_amount = new Decimal(5).mul(Decimal.pow(10, 9)).toString()
-    const params: DepositParams = {
+    const input_amount = toDecimalsAmount(3, 9).toString()
+
+    const result = await sdk.Vaults.calculateDepositAmount({
       vault_id: vaultId,
-      fix_amount_a: false,
-      input_amount: input_amount,
+      fix_amount_a: true,
+      input_amount,
       slippage: 0.01,
       side: InputType.OneSide,
+    })
+    console.log({ result })
+
+    const tx = new Transaction()
+    const params: DepositParams = {
+      vault_id: vaultId,
+      slippage: 0.01,
+      deposit_result: result,
+      coin_object_a: VaultsUtils.buildCoinWithBalance(
+        BigInt(input_amount),
+        '0xbde4ba4c2e274a60ce15c1cfff9e5c42e41654ac8b6d906a57efa4bd3c29f47d::hasui::HASUI',
+        tx
+      ),
     }
-    const paylod = await sdk.Vaults.deposit(params)
-    printTransaction(paylod)
-    // const txResult = await sdk.fullClient.sendTransaction(sendKeypair, paylod)
+
+    await sdk.Vaults.deposit(params, tx)
+
+    tx.getData().commands.forEach((command, index) => {
+      console.log('command: ', index, command)
+    })
+    // const txResult = await sdk.fullClient.sendTransaction(sendKeypair, tx)
     // console.log('deposit: ', txResult)
+
     const res = await sdk.fullClient.devInspectTransactionBlock({
-      transactionBlock: paylod,
+      transactionBlock: tx,
       sender: sdk.senderAddress,
     })
     console.log('1110 res: ', res.events.length > 0 ? res.events : res)
   })
 
   test('3 one side deposit fix_amount_a false', async () => {
-    const params: DepositParams = {
-      vault_id: vaultId,
-      fix_amount_a: true,
-      input_amount: '1000000',
-      slippage: 0.01,
-      side: InputType.OneSide,
+    const amounts = [toDecimalsAmount(3, 9).toString(), toDecimalsAmount(7, 9).toString()]
+
+    const tx = new Transaction()
+    for (const input_amount of amounts) {
+      const result = await sdk.Vaults.calculateDepositAmount({
+        vault_id: vaultId,
+        fix_amount_a: false,
+        input_amount,
+        slippage: 0.01,
+        side: InputType.OneSide,
+      })
+      console.log({ result })
+
+      const params: DepositParams = {
+        vault_id: vaultId,
+        slippage: 0.01,
+        deposit_result: result,
+        coin_object_b: VaultsUtils.buildCoinWithBalance(
+          BigInt(input_amount),
+          '0x0000000000000000000000000000000000000000000000000000000000000002::sui::SUI',
+          tx
+        ),
+        return_lp_token: true,
+      }
+
+      const lp_coin = await sdk.Vaults.deposit(params, tx)
+
+      if (lp_coin) {
+        tx.transferObjects([lp_coin], sdk.senderAddress)
+      }
     }
-    const paylod = await sdk.Vaults.deposit(params)
-    printTransaction(paylod)
-    const res = await sdk.fullClient.devInspectTransactionBlock({
-      transactionBlock: paylod,
-      sender: sdk.senderAddress,
-    })
-    console.log('1110 res: ', res.events.length > 0 ? res.events : res)
-    // const txResult = await sdk.fullClient.sendTransaction(sendKeypair, paylod)
-    // console.log('deposit: ', txResult)
+
+    // tx.getData().commands.forEach((command, index) => {
+    //   console.log('command: ', index, command)
+    // })
+    const txResult = await sdk.fullClient.sendTransaction(sendKeypair, tx)
+    console.log('deposit: ', txResult)
+
+    // const res = await sdk.fullClient.devInspectTransactionBlock({
+    //   transactionBlock: tx,
+    //   sender: sdk.senderAddress,
+    // })
+    // console.log('1110 res: ', res.events.length > 0 ? res.events : res)
   })
 
   test('1 calculate both side withdraw amount by fix coin', async () => {

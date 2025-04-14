@@ -66,12 +66,12 @@ export const clmmMainnet: SdkOptions = {
   },
   integrate: {
     package_id: '0x996c4d9480708fb8b92aa7acf819fb0497b5ec8e65ba06601cae2fb6db3312c3',
-    published_at: '0x8faab90228e4c4df91c41626bbaefa19fc25c514405ac64de54578dec9e6f5ee',
+    published_at: '0x2d8c2e0fc6dd25b0214b3fa747e0fd27fd54608142cd2e4f64c1cd350cc4add4',
     version: 2,
   },
   vaults: {
     package_id: '0xd3453d9be7e35efe222f78a810bb3af1859fd1600926afced8b4936d825c9a05',
-    published_at: '0xabbd278f738affe762e9df4765b3409bb1e86a355a4f611ad82b278c18108918',
+    published_at: '0x1ed1fef522ccea98a4fbd954543d5019238ec89282fbdea9a753e0a17e96fc28',
     version: 1,
     config: SDKConfig.vaultConfig,
   },
@@ -86,7 +86,7 @@ export const clmmMainnet: SdkOptions = {
     fullNodeurl: 'https://fullnode.mainnet.sui.io:443',
     walletAddress: '0xfba94aa36e93ccc7d84a6a57040fc51983223f1b522a8d0be3c3bf2c98977ebb',
     env: Env.Mainnet,
-    providers: ['CETUS', 'DEEPBOOK', 'KRIYA', 'KRIYAV3', 'FLOWX', 'FLOWXV3', 'AFTERMATH', 'TURBOS', 'HAEDAL', 'VOLO', 'AFSUI'],
+    providers: ['CETUS', 'DEEPBOOK', 'KRIYA', 'KRIYAV3', 'FLOWX', 'FLOWXV3', 'AFTERMATH', 'HAEDAL', 'VOLO', 'AFSUI'],
     pythUrls: [],
   },
 }

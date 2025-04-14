@@ -1,5 +1,7 @@
+/* eslint-disable import/no-extraneous-dependencies */
 import { Env } from '@cetusprotocol/aggregator-sdk'
 import { AggregatorResult, CoinPairType, Package, SuiAddressType } from '@cetusprotocol/cetus-sui-clmm-sdk'
+import { TransactionObjectArgument } from '@mysten/sui/transactions'
 import { FramsPositionNFT } from './frams'
 
 export const VaultsRouterModule = 'router'
@@ -214,6 +216,7 @@ export type CalculateAmountParams = {
 export type CalculateAmountResult = {
   request_id?: string
   side: InputType
+  original_input_amount: string
   amount_a: string
   amount_b: string
   amount_limit_a: string
@@ -222,6 +225,15 @@ export type CalculateAmountResult = {
   fix_amount_a: boolean
   swap_result?: SwapAmountResult
   partner?: string
+}
+
+export type DepositParams = {
+  vault_id: string
+  coin_object_a?: TransactionObjectArgument // If coin_object_a is provided, use coin_object_a. Please ensure coin_object is greater than or equal to amount_a
+  coin_object_b?: TransactionObjectArgument // If coin_object_b is provided, use coin_object_b. Please ensure coin_object is greater than or equal to amount_b
+  slippage: number
+  deposit_result: CalculateAmountResult
+  return_lp_token?: boolean
 }
 
 export type SwapAmountResult = {
@@ -254,15 +266,6 @@ export type CalculateRemoveAmountResult = {
   amount_limit_b: string
   burn_ft_amount: string
   swap_result?: SwapAmountResult
-}
-
-export type DepositParams = {
-  vault_id: string
-  side: InputType
-  fix_amount_a: boolean
-  input_amount: string
-  slippage: number
-  partner?: string
 }
 
 export type WithdrawBothParams = {

@@ -1,7 +1,9 @@
+/* eslint-disable import/no-extraneous-dependencies */
 import { SuiObjectResponse } from '@mysten/sui/client'
-import { Transaction, TransactionObjectArgument } from '@mysten/sui/transactions'
+import { coinWithBalance, Transaction, TransactionObjectArgument } from '@mysten/sui/transactions'
 import {
   ClmmPoolUtil,
+  CoinAssist,
   GAS_TYPE_ARG,
   TickMath,
   TransactionUtil,
@@ -177,5 +179,15 @@ export class VaultsUtils {
     }
 
     return suiCoin
+  }
+
+  public static buildCoinWithBalance(amount: bigint, coinType: string, tx: Transaction): TransactionObjectArgument {
+    if (amount === BigInt(0)) {
+      if (CoinAssist.isSuiCoin(coinType)) {
+        return tx.add(coinWithBalance({ balance: amount, useGasCoin: false }))
+      }
+    }
+
+    return tx.add(coinWithBalance({ balance: amount, type: coinType }))
   }
 }
